@@ -1,0 +1,16 @@
+---
+title:         Capstone Project
+author:        Ainesh Pandey, Caroline Shi, Vaishnavi Vadlamani, Annamalai Kathirkamanathan
+date created:  September 9, 2017
+date modified: September 9, 2017
+---
+
+```{r echo=FALSE, warning=FALSE}
+setwd("~/Desktop/Semester 3/Capstone")
+```
+
+```{r}
+# load initial dataset
+dataset   <- read.csv("Final Dataset_LimitedCountries_first_sales.csv")
+show_data <- unique(dataset[,c(1, 9:79)])
+```
