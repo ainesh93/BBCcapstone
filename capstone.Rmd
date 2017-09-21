@@ -6,11 +6,40 @@ date modified: September 9, 2017
 ---
 
 ```{r echo=FALSE, warning=FALSE}
-setwd("~/Desktop/Semester 3/Capstone")
+setwd("~/Desktop/Semester 3/Capstone/BBCcapstone")
 ```
 
 ```{r}
 # load initial dataset
-dataset   <- read.csv("Final Dataset_LimitedCountries_first_sales.csv")
-show_data <- unique(dataset[,c(1, 9:79)])
+dataset     <- read.csv("Final Dataset_LimitedCountries_first_sales.csv")
+genome_data <- unique(dataset[,c(1, 9:79)])
+```
+
+```{r}
+# add Total_Revenue column to genome data
+getTotalRevenue <- function(x)
+{
+  id <- x[1]
+  tempTable <- dataset[dataset$TitleId==id, ]
+  sum(tempTable$Revenue)
+}
+
+genome_data$Total_Revenue <- apply(genome_data, 1, getTotalRevenue)
+```
+
+```{r}
+# normalization functions
+normalize_log2 <- function(x) { ifelse(abs(x) <= 1, 0, sign(x)*log2(abs(x))) }
+normalize_0to1 <- function(x) { (x - min(x)) / (max(x) - min(x)) }
+normalize_1to1 <- function(x) { -1 + (((x - min(x)) / (max(x) - min(x))) * 2) }
+
+# create the baseline dataset for the baseline regression model
+dataset_baseline <- unique(dataset[, c(1,18:49,53:79,81:86)])
+dataset_baseline[,66] <- normalize_log2(dataset_baseline[,66])
+dataset_baseline[,c(3:4,6,8)] <- as.data.frame(lapply(dataset_baseline[,c(3:4,6,8)], normalize_0to1))
+dataset_baseline[,c(2,5,7,9)] <- as.data.frame(lapply(dataset_baseline[,c(2,5,7,9)], normalize_1to1))
+
+# generate the baseline regression model
+baseline_model <- lm(Revenue ~ .-TitleId, data=dataset_baseline)
+summary(baseline_model)
 ```
