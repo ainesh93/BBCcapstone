@@ -18,11 +18,7 @@ genome_data <- unique(dataset[,c(1, 9:79)])
 ```{r}
 # add Total_Revenue column to genome data
 getTotalRevenue <- function(x)
-{
-  id <- x[1]
-  tempTable <- dataset[dataset$TitleId==id, ]
-  sum(tempTable$Revenue)
-}
+{ sum(dataset[dataset$TitleId==x[1], ]$Revenue) }
 
 genome_data$Total_Revenue <- apply(genome_data, 1, getTotalRevenue)
 ```
