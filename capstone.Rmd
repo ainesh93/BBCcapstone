@@ -10,6 +10,160 @@ setwd("~/Desktop/Semester 3/Capstone/BBCcapstone")
 ```
 
 ```{r}
+
+# Update - 9/27
+
+# load initial dataset
+dataset <- read.csv("Final Dataset_LimitedCountries_first_sales.csv")
+
+# remove all CLIPS from dataset (they add too many outliers)
+dataset = subset(dataset, SalesType != 'CLIPS')
+
+# drop BusinessArea, SalesType columns,, Firstsale (dummy variable for them already exists - SalesType_Clips is not required)
+dataset <- dataset[, !(names(dataset) %in% c('CustomerName', 'CustomerId', 'BusinessArea', 'SalesType', 'FirstSale', 'SalesType_CLIPS'))]
+
+# add column TotalLengthOfContent to dataset
+dataset$TotalLengthOfContent <- with(dataset, EpisodeLengthmin*TotalNumberOfEpisodes)
+
+# add column AgeOfContent to dataset
+dataset$AgeOfContent <- with(dataset, as.Date(DateOfDeal,"%m/%d/%Y")-as.Date(DateOfPremier,"%m/%d/%Y"))
+
+# Change difftime to numeric
+dataset$AgeOfContent <- as.numeric(dataset$AgeOfContent)
+
+#To view the mapping of names to numerical values
+#library(gdata)
+#mapLevels(x=dataset$MediaType)
+
+# Convert media type to numeric values
+dataset$MediaType <- as.numeric(dataset$MediaType)
+
+#Convert rating to numeric
+dataset$Rated <- as.numeric(dataset$Rated)
+
+# Drop date columns
+genome_data <- dataset[, !(names(dataset) %in% c('DateOfDeal', 'DateOfPremier', 'EpisodeLengthmin', 'TotalNumberOfEpisodes'))]
+
+# Reordering column Media type
+index_mediatype <- grep("MediaType", names(genome_data))
+genome_data <- genome_data[, c(1:2,4:5,index_mediatype,(6:ncol(genome_data)))]
+
+# extract datasets by country from dataset
+datasets_country <- split(genome_data, f=genome_data$final_country)
+
+# Log normalization
+normalize_log2 <- function(x) { ifelse(abs(x) <= 1, 0, sign(x)*log2(abs(x))) }
+
+
+# normalize all numerical columns of each country by Z-score (media type, sequence # to age of content)
+dataset_au <- as.data.frame(datasets_country$AUSTRALIA)
+dataset_au[, c(7:16)] <- apply(dataset_au[, c(7:16)], 2, scale, center=TRUE, scale=TRUE)
+dataset_au[, c(42:43)] <- apply(dataset_au[, c(42:43)], 2, scale, center=TRUE, scale=TRUE)
+dataset_au[, c(77:78)] <- apply(dataset_au[, c(77:78)], 2, scale, center=TRUE, scale=TRUE)
+dataset_au$Revenue <- normalize_log2(dataset_au$Revenue)
+dataset_uk <- as.data.frame(datasets_country$`UNITED KINGDOM`)
+dataset_uk[, c(7:16)] <- apply(dataset_uk[, c(7:16)], 2, scale, center=TRUE, scale=TRUE)
+dataset_uk[, c(42:43)] <- apply(dataset_uk[, c(42:43)], 2, scale, center=TRUE, scale=TRUE)
+dataset_uk[, c(77:78)] <- apply(dataset_uk[, c(77:78)], 2, scale, center=TRUE, scale=TRUE)
+dataset_uk$Revenue <- normalize_log2(dataset_uk$Revenue)
+dataset_fr <- as.data.frame(datasets_country$FRANCE)
+dataset_fr[, c(7:16)] <- apply(dataset_fr[, c(7:16)], 2, scale, center=TRUE, scale=TRUE)
+dataset_fr[, c(42:43)] <- apply(dataset_fr[, c(42:43)], 2, scale, center=TRUE, scale=TRUE)
+dataset_fr[, c(77:78)] <- apply(dataset_fr[, c(77:78)], 2, scale, center=TRUE, scale=TRUE)
+dataset_fr$Revenue <- normalize_log2(dataset_fr$Revenue)
+dataset_usa <- as.data.frame(datasets_country$USA)
+dataset_usa[, c(7:16)] <- apply(dataset_usa[, c(7:16)], 2, scale, center=TRUE, scale=TRUE)
+dataset_usa[, c(42:43)] <- apply(dataset_usa[, c(42:43)], 2, scale, center=TRUE, scale=TRUE)
+dataset_usa[, c(77:78)] <- apply(dataset_usa[, c(77:78)], 2, scale, center=TRUE, scale=TRUE)
+dataset_usa$Revenue <- normalize_log2(dataset_usa$Revenue)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+# Old
+
 # load initial dataset
 dataset <- read.csv("Final Dataset_LimitedCountries_first_sales.csv")
 
