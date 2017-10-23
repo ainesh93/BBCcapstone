@@ -1,0 +1,145 @@
+---
+title:         Capstone Project
+author:        Ainesh Pandey, Caroline Shi, Vaishnavi Vadlamani, Annamalai Kathirkamanathan
+date created:  September 9, 2017
+date modified: October 23, 2017
+---
+
+```{r echo=FALSE, warning=FALSE}
+setwd("~/Desktop/Semester 3/Capstone/BBCcapstone")
+```
+
+```{r}
+
+# Update - 9/27
+
+# load initial dataset
+dataset <- read.csv("Final Dataset_LimitedCountries_first_sales.csv")
+
+# remove all CLIPS from dataset (they add too many outliers)
+dataset = subset(dataset, SalesType != 'CLIPS')
+
+# drop BusinessArea, SalesType columns,, Firstsale (dummy variable for them already exists - SalesType_Clips is not required)
+dataset <- dataset[, !(names(dataset) %in% c('CustomerName', 'CustomerId', 'BusinessArea', 'SalesType', 'FirstSale', 'SalesType_CLIPS'))]
+
+# add column TotalLengthOfContent to dataset
+dataset$TotalLengthOfContent <- with(dataset, EpisodeLengthmin*TotalNumberOfEpisodes)
+
+# add column AgeOfContent to dataset
+dataset$AgeOfContent <- with(dataset, as.Date(DateOfDeal,"%m/%d/%Y")-as.Date(DateOfPremier,"%m/%d/%Y"))
+
+# Change difftime to numeric
+dataset$AgeOfContent <- as.numeric(dataset$AgeOfContent)
+
+#To view the mapping of names to numerical values
+#library(gdata)
+#mapLevels(x=dataset$MediaType)
+
+# Convert media type to numeric values
+dataset$MediaType <- as.numeric(dataset$MediaType)
+
+#Convert rating to numeric
+dataset$Rated <- as.numeric(dataset$Rated)
+
+# Drop date columns
+genome_data <- dataset[, !(names(dataset) %in% c('DateOfDeal', 'DateOfPremier', 'EpisodeLengthmin', 'TotalNumberOfEpisodes'))]
+
+# Reordering column Media type
+index_mediatype <- grep("MediaType", names(genome_data))
+genome_data <- genome_data[, c(1:2,4:5,index_mediatype,(6:ncol(genome_data)))]
+
+# Demeaning the data - Update 10/23
+
+# Step 1 - LN (revenue)
+genome_data$logRevenue <- log(genome_data$Revenue)
+# Step 2 - Season avg log revenue
+season_avgRevenue <- aggregate(genome_data[,79], list(genome_data$TitleName), mean)
+library(plyr)
+season_avgRevenue <- rename(season_avgRevenue,c("Group.1" = "TitleName", "x" = "AvgLogRevenuePerSeason"))
+genome_data_demean <- merge(genome_data,season_avgRevenue,by = "TitleName",all.x = TRUE)
+# Step 3 - Demeanded log revenue
+genome_data_demean$demeanedLogRevenue <- genome_data_demean$logRevenue - genome_data_demean$AvgLogRevenuePerSeason
+
+# extract datasets by country from demeaned dataset
+datasets_country <- split(genome_data_demean, f=genome_data$final_country)
+
+# Log normalization
+#normalize_log2 <- function(x) { ifelse(abs(x) <= 1, 0, sign(x)*log2(abs(x))) }
+
+# Normalize all numerical columns of each country
+
+# 7:16 - NumberOfEpisodesSold, TotalNumberOfSeasons, calm2D, fear1D, shame1D, like2D, surprise1D, sure2D, anger1D, happy2D
+# 42:43 - MainCharacterNumber, GenderRatio
+# 52:70 - All Thoughtly variables
+# 77:78 - TotalLengthOfContent, AgeOfContent
+
+for (i in 1:length(datasets_country)) {
+  datasets_country[[i]][,c(7:16,42:43,52:70,77:78)] <- apply(datasets_country[[i]][,c(7:16,42:43,52:70,77:78)], 2, scale, center=TRUE, scale=TRUE)
+}
+
+#datasets_country is a list of dataframes that has the genome information of each country.
+
+```
+
+
+
+
+
+
+```{r}
+
+# Old
+
+# load initial dataset
+dataset <- read.csv("Final Dataset_LimitedCountries_first_sales.csv")
+
+# remove all CLIPS from dataset (they add too many outliers)
+dataset = subset(dataset, SalesType != 'CLIPS')
+
+# drop BusinessArea and SalesType columns (dummy variable for them already exists)
+dataset <- dataset[, !(names(dataset) %in% c('BusinessArea', 'SalesType', 'SalesType_CLIPS'))]
+
+# add column TotalLengthOfContent to dataset
+dataset$TotalLengthOfContent <- with(dataset, EpisodeLengthmin*TotalNumberOfEpisodes)
+
+# add column AgeOfContent to dataset
+dataset$AgeOfContent <- with(dataset, as.Date(DateOfDeal,"%m/%d/%Y")-as.Date(DateOfPremier,"%m/%d/%Y"))
+
+# extract genome data from dataset into genome_data
+genome_data <- unique(dataset[,c(1, 9:77, 84:85)])
+genome_data$Total_Revenue <- apply(genome_data, 1, function(x) sum(dataset[dataset$TitleId==x[1], ]$Revenue) )
+
+# extract datasets by country from dataset
+datasets_country <- split(dataset, f=dataset$final_country)
+
+# normalize sentiment columns of each country by Z-score
+for(country in datasets_country)
+{ country[, c(18:25)] <- apply(country[, c(18:25)], 2, scale, center=TRUE, scale=TRUE) }
+```
+
+```{r}
+genome_data$Total_Revenue <- apply(genome_data, 1, function(x) sum(dataset[dataset$TitleId==x[1], ]$Revenue) )
+```
+
+```{r}
+# normalization functions
+normalize_log2 <- function(x) { ifelse(abs(x) <= 1, 0, sign(x)*log2(abs(x))) }
+normalize_0to1 <- function(x) { (x - min(x)) / (max(x) - min(x)) }
+normalize_1to1 <- function(x) { -1 + (((x - min(x)) / (max(x) - min(x))) * 2) }
+
+# create the baseline dataset for the baseline regression model
+dataset_baseline <- unique(dataset[, c(1,18:49,53:79,81:86)])
+dataset_baseline[,66] <- normalize_log2(dataset_baseline[,66])
+dataset_baseline[,c(3:4,6,8)] <- as.data.frame(lapply(dataset_baseline[,c(3:4,6,8)], normalize_0to1))
+dataset_baseline[,c(2,5,7,9)] <- as.data.frame(lapply(dataset_baseline[,c(2,5,7,9)], normalize_1to1))
+
+# generate the baseline regression model
+baseline_model <- lm(Revenue ~ .-TitleId, data=dataset_baseline)
+summary(baseline_model)
+```
+
+
+```{r}
+datasets_country <- split(dataset, f=dataset$final_country)
+print(datasets_country[1])
+```
